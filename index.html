@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Weather App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5a623;
+            --background-color: #f0f5f9;
+            --card-background: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1, h2 {
+            margin: 0 0 15px 0;
+        }
+
+        .location-input {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #locationInput {
+            padding: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px 0 0 25px;
+            width: 300px;
+            outline: none;
+        }
+
+        #searchBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 0 25px 25px 0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #searchBtn:hover {
+            background-color: #e09400;
+        }
+
+        .weather-card {
+            background-color: var(--card-background);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+
+        #currentWeatherData, #forecastData {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .weather-item {
+            text-align: center;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .weather-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        #weatherGraph, #precipChart, #windChart, #uvChart, #aqiChart {
+            grid-column: 1 / -1;
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            header, #weatherGraph, #precipChart, #windChart, #uvChart, #aqiChart {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 767px) {
+            #locationInput {
+                width: 200px;
+            }
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            height: 100px;
+        }
+
+        .loading::after {
+            content: "";
+            width: 40px;
+            height: 40px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        #currentWeather {
+            background-size: cover;
+            background-position: center;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+        }
+
+        .sun-glow {
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px #fff, 0 0 20px #ff0, 0 0 35px #ff0; }
+            to { text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px #fff, 0 0 40px #ff0, 0 0 70px #ff0; }
+        }
+
+        #subscribeForm, #alertForm {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        #subscribeEmail, #alertThreshold {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 250px;
+            margin-right: 10px;
+        }
+
+        #subscribeBtn, #setAlertBtn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #alertType {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Advanced Weather App</h1>
+            <div class="location-input">
+                <input type="text" id="locationInput" placeholder="Enter location">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
+            </div>
+        </header>
+        <div id="loading" class="loading"></div>
+        <section id="currentWeather" class="weather-card">
+            <h2>Current Weather</h2>
+            <div id="currentWeatherData"></div>
+        </section>
+        <section id="forecast" class="weather-card">
+            <h2>5-Day Forecast</h2>
+            <div id="forecastData"></div>
+        </section>
+        <section id="weatherGraph" class="weather-card">
+            <h2>Temperature Trend</h2>
+            <canvas id="tempChart"></canvas>
+        </section>
+        <section id="precipChart" class="weather-card">
+            <h2>Precipitation Probability</h2>
+            <div id="precipChartContainer"></div>
+        </section>
+        <section id="windChart" class="weather-card">
+            <h2>Wind Speed and Direction</h2>
+            <div id="windChartContainer"></div>
+        </section>
+        <section id="uvChart" class="weather-card">
+            <h2>UV Index</h2>
+            <div id="uvChartContainer"></div>
+        </section>
+        <section id="aqiChart" class="weather-card">
+            <h2>Air Quality Index (AQI)</h2>
+            <div id="aqiChartContainer"></div>
+        </section>
+        <section id="subscribe" class="weather-card">
+            <h2>Subscribe for Daily Notifications</h2>
+            <form id="subscribeForm">
+                <input type="email" id="subscribeEmail" placeholder="Enter your email" required>
+                <button type="submit" id="subscribeBtn">Subscribe</button>
+            </form>
+        </section>
+        <section id="alerts" class="weather-card">
+            <h2>Set Custom Alert</h2>
+            <form id="alertForm">
+                <select id="alertType">
+                    <option value="temperature">Temperature</option>
+                    <option value="precipitation">Precipitation</option>
+                    <option value="wind">Wind Speed</option>
+                    <option value="uv">UV Index</option>
+                    <option value="aqi">Air Quality Index</option>
+                </select>
+                <input type="number" id="alertThreshold" placeholder="Threshold value" required>
+                <button type="submit" id="setAlertBtn">Set Alert</button>
+            </form>
+        </section>
+    </div>
+    <script>
+        const API_KEY = 'VjsZ65p0eNh64T9DFpYj1KJ7umDPhpGe';
+        const API_BASE_URL = 'https://api.tomorrow.io/v4/timelines';
+
+        const locationInput = document.getElementById('locationInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const currentWeatherData = document.getElementById('currentWeatherData');
+        const forecastData = document.getElementById('forecastData');
+        const loading = document.getElementById('loading');
+        const subscribeForm = document.getElementById('subscribeForm');
+        const alertForm = document.getElementById('alertForm');
+
+        let tempChart, precipChart, windChart, uvChart, aqiChart;
+        let subscribers = JSON.parse(localStorage.getItem('subscribers')) || [];
+        let dailyWeatherData = JSON.parse(localStorage.getItem('dailyWeatherData')) || {};
+
+        searchBtn.addEventListener('click', () => {
+            const location = locationInput.value;
+            if (location) {
+                getWeatherData(location);
+            }
+        });
+
+        locationInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const location = locationInput.value;
+                if (location) {
+                    getWeatherData(location);
+                }
+            }
+        });
+
+        async function getWeatherData(location) {
+            try {
+                showLoading();
+                const response = await fetch(`${API_BASE_URL}?location=${location}&fields=temperature,temperatureApparent,weatherCode,humidity,windSpeed,windDirection,precipitationProbability,uvIndex,epaIndex&timesteps=1h,1d&units=metric&apikey=${API_KEY}`);
+                const data = await response.json();
+
+                displayCurrentWeather(location, data.data.timelines[0].intervals[0]);
+                displayForecast(data.data.timelines[1].intervals.slice(1, 6));
+                createTemperatureChart(data.data.timelines[0].intervals.slice(0, 24));
+                createPrecipitationChart(data.data.timelines[0].intervals.slice(0, 24));
+                createWindChart(data.data.timelines[0].intervals.slice(0, 24));
+                createUVChart(data.data.timelines[0].intervals.slice(0, 24));
+                createAQIChart(data.data.timelines[0].intervals.slice(0, 24));
+                saveDailyWeatherData(location, data.data.timelines[1].intervals[0]);
+                hideLoading();
+                showAlert('success', 'Weather data updated successfully!');
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                showAlert('error', 'Error fetching weather data. Please try again.');
+                hideLoading();
+            }
+        }
+
+        function displayCurrentWeather(location, currentData) {
+            const weather = currentData.values;
+            const weatherCode = weather.weatherCode;
+            const backgroundImage = getWeatherBackground(weatherCode);
+            
+            document.getElementById('currentWeather').style.backgroundImage = `url(${backgroundImage})`;
+            
+            currentWeatherData.innerHTML = `
+                <div class="weather-item fade-in">
+                    <h3>${location}</h3>
+                    <i class="fas ${getWeatherIcon(weatherCode)} weather-icon"></i>
+                    <h3>${weather.temperature.toFixed(1)}°C</h3>
+                    <p>Feels like: ${weather.temperatureApparent.toFixed(1)}°C</p>
+                    <p>Humidity: ${weather.humidity.toFixed(0)}%</p>
+                    <p>Wind: ${weather.windSpeed.toFixed(1)} m/s</p>
+                    <p>UV Index: ${weather.uvIndex.toFixed(1)}</p>
+                    <p>AQI: ${weather.epaIndex}</p>
+                </div>
+            `;
+        }
+
+        function displayForecast(forecastData) {
+            document.getElementById('forecastData').innerHTML = forecastData.map((day, index) => `
+                <div class="weather-item fade-in" style="animation-delay: ${index * 0.1}s">
+                    <p>${moment(day.startTime).format('ddd, MMM D')}</p>
+                    <i class="fas ${getWeatherIcon(day.values.weatherCode)} weather-icon ${day.values.weatherCode === 1000 ? 'sun-glow' : ''}"></i>
+                    <p>${day.values.temperature.toFixed(1)}°C</p>
+                    <p>Precip: ${day.values.precipitationProbability}%</p>
+                </div>
+            `).join('');
+        }
+
+        function createTemperatureChart(hourlyData) {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            
+            if (tempChart) {
+                tempChart.destroy();
+            }
+
+            tempChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hourlyData.map(hour => moment(hour.startTime).format('HH:mm')),
+                    datasets: [{
+                        label: 'Temperature (°C)',
+                        data:  hourlyData.map(hour => hour.values.temperature),
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPrecipitationChart(hourlyData) {
+            const options = {
+                series: [{
+                    name: 'Precipitation Probability',
+                    data: hourlyData.map(hour => hour.values.precipitationProbability)
+                }],
+                chart: {
+                    height: 350,
+                    type: 'bar'
+                },
+                plotOptions: {
+                    bar: {
+                        borderRadius: 10,
+                        dataLabels: {
+                            position: 'top',
+                        },
+                    }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: function (val) {
+                        return val + "%";
+                    },
+                    offsetY: -20,
+                    style: {
+                        fontSize: '12px',
+                        colors: ["#304758"]
+                    }
+                },
+                xaxis: {
+                    categories: hourlyData.map(hour => moment(hour.startTime).format('HH:mm')),
+                    position: 'top',
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false
+                    },
+                    crosshairs: {
+                        fill: {
+                            type: 'gradient',
+                            gradient: {
+                                colorFrom: '#D8E3F0',
+                                colorTo: '#BED1E6',
+                                stops: [0, 100],
+                                opacityFrom: 0.4,
+                                opacityTo: 0.5,
+                            }
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                    }
+                },
+                yaxis: {
+                    axisBorder: {
+                        show: false
+                    },
+                    axisTicks: {
+                        show: false,
+                    },
+                    labels: {
+                        show: false,
+                        formatter: function (val) {
+                            return val + "%";
+                        }
+                    }
+                },
+                title: {
+                    text: 'Precipitation Probability',
+                    floating: true,
+                    offsetY: 330,
+                    align: 'center',
+                    style: {
+                        color: '#444'
+                    }
+                }
+            };
+
+            if (precipChart) {
+                precipChart.destroy();
+            }
+
+            precipChart = new ApexCharts(document.querySelector("#precipChartContainer"), options);
+            precipChart.render();
+        }
+
+        function createWindChart(hourlyData) {
+            const options = {
+                series: [{
+                    name: 'Wind Speed',
+                    data: hourlyData.map(hour => hour.values.windSpeed)
+                }],
+                chart: {
+                    height: 350,
+                    type: 'radar',
+                },
+                title: {
+                    text: 'Wind Speed and Direction'
+                },
+                xaxis: {
+                    categories: hourlyData.map(hour => moment(hour.startTime).format('HH:mm'))
+                },
+                yaxis: {
+                    labels: {
+                        formatter: function(val) {
+                            return val.toFixed(1) + " m/s";
+                        }
+                    }
+                }
+            };
+
+            if (windChart) {
+                windChart.destroy();
+            }
+
+            windChart = new ApexCharts(document.querySelector("#windChartContainer"), options);
+            windChart.render();
+        }
+
+        function createUVChart(hourlyData) {
+            const options = {
+                series: [hourlyData[0].values.uvIndex],
+                chart: {
+                    height: 350,
+                    type: 'radialBar',
+                    offsetY: -10
+                },
+                plotOptions: {
+                    radialBar: {
+                        startAngle: -135,
+                        endAngle: 135,
+                        dataLabels: {
+                            name: {
+                                fontSize: '16px',
+                                color: undefined,
+                                offsetY: 120
+                            },
+                            value: {
+                                offsetY: 76,
+                                fontSize: '22px',
+                                color: undefined,
+                                formatter: function (val) {
+                                    return val.toFixed(1);
+                                }
+                            }
+                        }
+                    }
+                },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shade: 'dark',
+                        shadeIntensity: 0.15,
+                        inverseColors: false,
+                        opacityFrom: 1,
+                        opacityTo: 1,
+                        stops: [0, 50, 65, 91]
+                    },
+                },
+                stroke: {
+                    dashArray: 4
+              
